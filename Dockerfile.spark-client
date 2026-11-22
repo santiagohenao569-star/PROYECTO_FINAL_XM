@@ -1,0 +1,19 @@
+FROM spark:3.5.9-scala2.12-java11-python3-ubuntu
+
+USER root
+
+ENV PIP_ROOT_USER_ACTION=ignore
+ENV SPARK_HOME=/opt/spark
+ENV PYTHONPATH=/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.7-src.zip
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3-pip procps curl \
+    && python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && python3 -m pip install --no-cache-dir \
+       "jupyterlab>=4.4,<5" \
+       "kafka-python>=2.2,<3" \
+       "requests>=2.32,<3" \
+       "pandas>=2.2,<3" \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/gdm

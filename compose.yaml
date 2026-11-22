@@ -1,0 +1,157 @@
+name: xm-hidrologia
+
+services:
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    hostname: namenode
+    container_name: xm-namenode
+    restart: unless-stopped
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    volumes:
+      - namenode-data:/hadoop/dfs/name
+      - ./:/opt/gdm
+    environment:
+      CLUSTER_NAME: xm-hidrologia
+    env_file:
+      - ./hadoop.env
+    networks: [xm-net]
+
+  datanode1:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    hostname: datanode1
+    container_name: xm-datanode1
+    restart: unless-stopped
+    ports:
+      - "9864:9864"
+    volumes:
+      - datanode1-data:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - ./hadoop.env
+    networks: [xm-net]
+
+  datanode2:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    hostname: datanode2
+    container_name: xm-datanode2
+    restart: unless-stopped
+    ports:
+      - "9865:9864"
+    volumes:
+      - datanode2-data:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - ./hadoop.env
+    networks: [xm-net]
+
+  spark-master:
+    image: spark:3.5.9-scala2.12-java11-python3-ubuntu
+    hostname: spark-master
+    container_name: xm-spark-master
+    user: root
+    restart: unless-stopped
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark-master --port 7077 --webui-port 8080
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    networks: [xm-net]
+
+  spark-worker1:
+    image: spark:3.5.9-scala2.12-java11-python3-ubuntu
+    hostname: spark-worker1
+    container_name: xm-spark-worker1
+    user: root
+    restart: unless-stopped
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077 --cores 2 --memory 1g --webui-port 8081
+    ports:
+      - "8081:8081"
+    depends_on: [spark-master]
+    networks: [xm-net]
+
+  spark-worker2:
+    image: spark:3.5.9-scala2.12-java11-python3-ubuntu
+    hostname: spark-worker2
+    container_name: xm-spark-worker2
+    user: root
+    restart: unless-stopped
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077 --cores 2 --memory 1g --webui-port 8082
+    ports:
+      - "8082:8082"
+    depends_on: [spark-master]
+    networks: [xm-net]
+
+  kafka:
+    image: apache/kafka:3.9.1
+    hostname: kafka
+    container_name: xm-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,HOST://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks: [xm-net]
+
+  spark-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark-client
+    hostname: spark-client
+    container_name: xm-spark-client
+    user: root
+    restart: unless-stopped
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --ServerApp.token='' --ServerApp.password='' --ServerApp.root_dir=/opt/gdm
+    ports:
+      - "8888:8888"
+      - "4040:4040"
+    volumes:
+      - ./:/opt/gdm
+      - ./config/hadoop:/etc/hadoop/conf:ro
+      - ./config/spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - ivy-cache:/root/.ivy2
+    environment:
+      SPARK_LOCAL_IP: spark-client
+      PYSPARK_PYTHON: python3
+      HADOOP_CONF_DIR: /etc/hadoop/conf
+    depends_on:
+      - namenode
+      - spark-master
+      - kafka
+    networks: [xm-net]
+
+volumes:
+  namenode-data:
+  datanode1-data:
+  datanode2-data:
+  kafka-data:
+  ivy-cache:
+
+networks:
+  xm-net:
+    driver: bridge
