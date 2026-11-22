@@ -1,0 +1,60 @@
+{
+  "Metric": {
+    "Id": "AporCaudal",
+    "Name": "Aportes Caudal por Rio",
+    "StartDate": "2020-01-01T00:00:00",
+    "EndDate": "2020-01-30T00:00:00"
+  },
+  "Items": [
+    {
+      "Date": "2020-01-01",
+      "DailyEntities": [
+        {
+          "Id": "Rio",
+          "Name": "A. SAN LORENZO",
+          "Value": 29.465
+        }
+      ]
+    },
+    {
+      "Date": "2020-01-01",
+      "DailyEntities": [
+        {
+          "Id": "Rio",
+          "Name": "ALTOANCHICAYA",
+          "Value": 125.44
+        }
+      ]
+    },
+    {
+      "Date": "2020-01-01",
+      "DailyEntities": [
+        {
+          "Id": "Rio",
+          "Name": "AMOYA",
+          "Value": 20.402
+        }
+      ]
+    },
+    {
+      "Date": "2020-01-01",
+      "DailyEntities": [
+        {
+          "Id": "Rio",
+          "Name": "BATA",
+          "Value": 13.18
+        }
+      ]
+    },
+    {
+      "Date": "2020-01-01",
+      "DailyEntities": [
+        {
+          "Id": "Rio",
+          "Name": "BETANIA CP",
+          "Value": 261.72
+        }
+      ]
+    }
+  ]
+}
